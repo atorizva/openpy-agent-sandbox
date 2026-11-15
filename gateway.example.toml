@@ -1,0 +1,13 @@
+# Example host gateway config (~/.config/openshell/gateway.toml).
+# Copy the relevant sections to enable Docker + bind mounts + caller driver config.
+[openshell]
+version = 2
+
+[openshell.gateway]
+compute_driver = "docker"
+
+[openshell.drivers.docker]
+enable_bind_mounts = true
+allow_driver_config = true
+image_pull_policy = "if_not_present"
+# socket_path = "/var/run/docker.sock"

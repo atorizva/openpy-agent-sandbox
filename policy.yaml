@@ -1,0 +1,98 @@
+version: 1
+filesystem_policy:
+  include_workdir: true
+landlock:
+  compatibility: hard_requirement
+process:
+  run_as_user: "1000"
+  run_as_group: "1000"
+network_policies:
+  opencode:
+    name: OpenCode API
+    endpoints:
+      - host: opencode.ai
+        port: 443
+        protocol: rest
+        access: full
+        enforcement: enforce
+      - host: models.dev
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - /usr/local/bin/opencode
+  github_api:
+    name: GitHub API
+    endpoints:
+      - host: api.github.com
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+      - host: api.github.com
+        port: 443
+        path: /graphql
+        protocol: graphql
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - /usr/bin/gh
+      - /usr/local/bin/gh
+      - /usr/bin/git
+      - /usr/local/bin/git
+  github_git:
+    name: GitHub Git + tool downloads
+    endpoints:
+      - host: github.com
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "**" }
+          - allow: { method: HEAD, path: "**" }
+          - allow: { method: OPTIONS, path: "**" }
+          - allow: { method: POST, path: "/**/git-upload-pack" }
+          - allow: { method: POST, path: "/**/git-receive-pack" }
+      - host: objects.githubusercontent.com
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+      - host: codeload.github.com
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - /usr/bin/git
+      - /usr/local/bin/git
+      - /usr/bin/gh
+      - /usr/local/bin/gh
+      - /usr/local/bin/uv
+  github_ssh:
+    name: GitHub SSH
+    endpoints:
+      - host: github.com
+        port: 22
+        protocol: tcp
+    binaries:
+      - /usr/bin/ssh
+      - /usr/bin/git
+      - /usr/local/bin/git
+  pypi:
+    name: PyPI
+    endpoints:
+      - host: pypi.org
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+      - host: files.pythonhosted.org
+        port: 443
+        protocol: rest
+        access: read-only
+        enforcement: enforce
+    binaries:
+      - /usr/local/bin/uv
+network_middlewares: {}

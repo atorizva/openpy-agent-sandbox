@@ -1,0 +1,27 @@
+# OpenShell provider profile for OpenCode Go (custom). Import with:
+#   openshell profile lint -f providers/opencode-go.yaml
+#   openshell profile import -f providers/opencode-go.yaml --global
+# Then create a provider instance:
+#   openshell provider create --name opencode-go --type opencode-go --global-profile --credential OPENCODE_API_KEY
+id: opencode-go
+display_name: OpenCode Go
+description: OpenCode Go inference endpoint (opencode.ai)
+category: inference
+inference_capable: true
+credentials:
+  - name: api_key
+    description: OpenCode API key
+    env_vars: [OPENCODE_API_KEY]
+    required: true
+    auth_style: bearer
+    header_name: authorization
+discovery:
+  credentials: [api_key]
+endpoints:
+  - host: opencode.ai
+    port: 443
+    protocol: rest
+    access: full
+    enforcement: enforce
+binaries:
+  - /usr/local/bin/opencode
