@@ -21,7 +21,7 @@ digest and clones this repo (pinned tag) for `policy.yaml`, `providers/`, and th
 
 ## Host prerequisites
 
-- OpenShell CLI installed (tested with `0.1.6`).
+- OpenShell CLI installed (tested with `0.1.8`).
 - Docker Engine/daemon reachable.
 - WSL2 + Docker Desktop on Linux x86_64 is **experimental**.
 
@@ -62,7 +62,7 @@ just opencode
 Raw equivalent:
 
 ```bash
-openshell sandbox create -n agent-py-sandbox \
+openshell sandbox create --name agent-py-sandbox \
   --from openpy-agent-sandbox:local --detach \
   --driver-config-json '{"docker":{"mounts":[{"type":"bind","source":"/path/to/project","target":"/sandbox/repo","read_only":false}]}}' \
   --provider opencode-go --provider github \
