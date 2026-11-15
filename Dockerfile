@@ -15,9 +15,7 @@ RUN apk add --no-cache \
       git \
       github-cli \
       just \
-      openssh-client \
-      openssh-client-default \
-      openssh-client-krb5
+      openssh-client
 
 # Install uv (pinned)
 RUN curl -LsSf https://astral.sh/uv/0.13.8/install.sh | sh
