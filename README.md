@@ -83,3 +83,4 @@ digest from the consumer project (`ghcr.io/atorizva/openpy-agent-sandbox@sha256:
 - `apk` package versions float at build time; pin the published image digest in consumers for
   reproducibility.
 - Network policy is default-deny; review any change carefully.
+pr-test 1794766028
