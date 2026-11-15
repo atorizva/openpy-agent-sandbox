@@ -11,3 +11,7 @@ enable_bind_mounts = true
 allow_driver_config = true
 image_pull_policy = "if_not_present"
 # socket_path = "/var/run/docker.sock"
+
+# Bind mounts require disabling resource admission for the driver.
+[openshell.drivers.docker.resource_admission]
+enabled = false

@@ -13,7 +13,7 @@ build-image:
 
 # Start a persistent detached sandbox bound to a project directory (required arg).
 start PROJECT_DIR:
-    openshell sandbox create -n {{NAME}} --from {{IMAGE}} --detach \
+    openshell sandbox create --name {{NAME}} --from {{IMAGE}} --detach \
       --driver-config-json '{"docker":{"mounts":[{"type":"bind","source":"{{PROJECT_DIR}}","target":"/sandbox/repo","read_only":false}]}}' \
       --provider opencode-go --provider github \
       --policy policy.yaml -- \
@@ -21,7 +21,7 @@ start PROJECT_DIR:
 
 # Attach to the sandbox's canonical shell
 connect:
-    openshell sandbox connect -n {{NAME}}
+    openshell sandbox connect {{NAME}}
 
 # Run OpenCode (interactive, standalone) inside the sandbox at /sandbox/repo
 opencode:
@@ -33,4 +33,4 @@ exec *ARGS:
 
 # Delete the sandbox (destructive)
 delete:
-    openshell sandbox delete -n {{NAME}}
+    openshell sandbox delete {{NAME}}
