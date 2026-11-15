@@ -30,14 +30,38 @@ network_policies:
       - host: api.github.com
         port: 443
         protocol: rest
-        access: read-only
         enforcement: enforce
+        rules:
+          - allow: { method: GET, path: "**" }
+          - allow: { method: HEAD, path: "**" }
+          - allow: { method: OPTIONS, path: "**" }
+          # PR/issue/comment create + update
+          - allow: { method: POST, path: "/repos/*/*/pulls" }
+          - allow: { method: PATCH, path: "/repos/*/*/pulls/*" }
+          - allow: { method: POST, path: "/repos/*/*/issues" }
+          - allow: { method: PATCH, path: "/repos/*/*/issues/*" }
+          - allow: { method: POST, path: "/repos/*/*/issues/*/comments" }
+          - allow: { method: PATCH, path: "/repos/*/*/issues/comments/*" }
+        # merge (PUT), delete, and release creation are out of scope (decision #4)
+        deny_rules:
+          - { method: PUT, path: "**" }
+          - { method: DELETE, path: "**" }
+          - { method: POST, path: "/**/releases" }
       - host: api.github.com
         port: 443
         path: /graphql
         protocol: graphql
-        access: read-only
         enforcement: enforce
+        rules:
+          - allow: { operation_type: query }
+          # scoped mutations only; merge/delete mutations stay denied
+          - allow:
+              operation_type: mutation
+              fields:
+                [createIssue, createPullRequest, addComment, updateIssue, updatePullRequest, updateIssueComment, closeIssue, reopenIssue, closePullRequest, reopenPullRequest]
+        deny_rules:
+          - operation_type: mutation
+            fields: [mergePullRequest, deleteIssue, deletePullRequest, deleteBranch, deleteRepository]
     binaries:
       - path: /usr/bin/gh
       - path: /usr/bin/git

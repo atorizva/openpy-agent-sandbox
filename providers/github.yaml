@@ -4,6 +4,7 @@
 # Then create a provider instance:
 #   openshell provider create --name github --type github --global-profile --credential GITHUB_TOKEN
 id: github
+resource_version: 1
 display_name: GitHub
 description: GitHub API and Git operations (HTTPS + SSH via policy)
 category: source_control
@@ -20,13 +21,13 @@ endpoints:
   - host: api.github.com
     port: 443
     protocol: rest
-    access: read-only
+    access: full
     enforcement: enforce
   - host: api.github.com
     port: 443
     path: /graphql
     protocol: graphql
-    access: read-only
+    access: full
     enforcement: enforce
   - host: github.com
     port: 443
