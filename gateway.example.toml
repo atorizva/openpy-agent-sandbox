@@ -1,5 +1,5 @@
 # Example host gateway config (~/.config/openshell/gateway.toml).
-# Copy the relevant sections to enable Docker + bind mounts + caller driver config.
+# Copy the relevant sections to enable the Docker compute driver.
 [openshell]
 version = 2
 
@@ -7,11 +7,5 @@ version = 2
 compute_driver = "docker"
 
 [openshell.drivers.docker]
-enable_bind_mounts = true
-allow_driver_config = true
 image_pull_policy = "if_not_present"
 # socket_path = "/var/run/docker.sock"
-
-# Bind mounts require disabling resource admission for the driver.
-[openshell.drivers.docker.resource_admission]
-enabled = false
