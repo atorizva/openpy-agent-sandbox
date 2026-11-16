@@ -11,19 +11,25 @@ default:
 build-image:
     docker build -t {{IMAGE}} -f Dockerfile .
 
-# Start a persistent detached sandbox bound to a project directory (required arg).
+# Create a sandbox seeded with PROJECT_DIR, then attach to OpenCode so you can watch/guide the agent.
+# Changes flow back to the host via a pull request, so a one-way upload is enough (no bind mount).
 start PROJECT_DIR:
     openshell sandbox create --name {{NAME}} --from {{IMAGE}} --detach \
-      --driver-config-json '{"docker":{"mounts":[{"type":"bind","source":"{{PROJECT_DIR}}","target":"/sandbox/repo","read_only":false}]}}' \
+      --upload "{{PROJECT_DIR}}:/sandbox" --no-git-ignore \
       --provider opencode-go --provider github \
-      --policy policy.yaml -- \
-      sh -lc 'while true; do sleep 3600; done'
+      --policy policy.yaml
+    # Upload preserves the source basename; move it to the fixed /sandbox/repo path.
+    # --no-git-ignore keeps .git (branch/remote/history) for the PR, then git clean -fdX
+    # strips the .gitignore'd artifacts it also copied.
+    openshell sandbox exec -n {{NAME}} -- \
+      sh -lc "rm -rf /sandbox/repo && mv '/sandbox/$(basename '{{PROJECT_DIR}}')' /sandbox/repo && git -C /sandbox/repo clean -fdX"
+    openshell sandbox exec -n {{NAME}} --tty --workdir {{REPO_MOUNT}} -- opencode --standalone
 
 # Attach to the sandbox's canonical shell
 connect:
     openshell sandbox connect {{NAME}}
 
-# Run OpenCode (interactive, standalone) inside the sandbox at /sandbox/repo
+# Re-attach OpenCode (interactive, standalone) inside the sandbox at /sandbox/repo
 opencode:
     openshell sandbox exec -n {{NAME}} --tty --workdir {{REPO_MOUNT}} -- opencode --standalone
 
