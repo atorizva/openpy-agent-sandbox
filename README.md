@@ -16,6 +16,7 @@ digest and clones this repo (pinned tag) for `policy.yaml`, `providers/`, and th
   default-deny egress with enforced rules for OpenCode, GitHub (API/Git/SSH), and PyPI.
 - `providers/` — OpenCode Go and GitHub credential profiles.
 - `Justfile` — `build-image`, `start`, `connect`, `opencode`, `exec`, `delete`.
+- `.gitconfig` — git credential helper pointing at `gh`, so `git push` uses the injected GitHub token.
 - `.github/workflows/publish-image.yml` — builds and pushes the image to GHCR on `main` and `v*`
   tags.
 
@@ -28,7 +29,7 @@ digest and clones this repo (pinned tag) for `policy.yaml`, `providers/`, and th
 ## Gateway config (one-time, host)
 
 Copy the Docker sections of `gateway.example.toml` into `~/.config/openshell/gateway.toml`
-(setting `compute_driver = "docker"`, `enable_bind_mounts = true`, `allow_driver_config = true`).
+(setting `compute_driver = "docker"`).
 
 ## Build the image (local)
 
@@ -52,25 +53,36 @@ export GITHUB_TOKEN="ghp_..."   # or a fine-grained token
 openshell provider create --name github --type github --global-profile --credential GITHUB_TOKEN
 ```
 
-## Run (bind a project directory to /sandbox/repo)
+## Run (seed a project into the sandbox and attach)
 
 ```bash
 just start /path/to/project
-just opencode
 ```
+
+`just start` creates the sandbox, uploads the project (one-way, `.git` included via
+`--no-git-ignore` so the agent can branch/commit/PR), moves it to `/sandbox/repo`, strips the
+`.gitignore`'d artifacts with `git clean -fdX`, and drops you into the OpenCode TUI so you can
+watch and guide the agent. Changes flow back to the host through a pull request, not a bind mount.
 
 Raw equivalent:
 
 ```bash
 openshell sandbox create --name agent-py-sandbox \
   --from openpy-agent-sandbox:local --detach \
-  --driver-config-json '{"docker":{"mounts":[{"type":"bind","source":"/path/to/project","target":"/sandbox/repo","read_only":false}]}}' \
+  --upload /path/to/project:/sandbox --no-git-ignore \
   --provider opencode-go --provider github \
-  --policy policy.yaml -- \
-  sh -lc 'while true; do sleep 3600; done'
+  --policy policy.yaml
+
+openshell sandbox exec -n agent-py-sandbox -- \
+  sh -lc "rm -rf /sandbox/repo && mv '/sandbox/$(basename /path/to/project)' /sandbox/repo && git -C /sandbox/repo clean -fdX"
 
 openshell sandbox exec -n agent-py-sandbox --tty --workdir /sandbox/repo -- opencode --standalone
 ```
+
+`--upload` preserves the source basename, so the second step moves it to the fixed `/sandbox/repo`
+path. `--no-git-ignore` is required because the default `.gitignore` filtering also drops `.git`
+itself (verified against 0.1.8); it keeps `.git` (branch/remote/history) but also copies ignored
+files, which the following `git clean -fdX` removes.
 
 ## Image publishing
 
@@ -80,6 +92,14 @@ digest from the consumer project (`ghcr.io/atorizva/openpy-agent-sandbox@sha256:
 ## Notes
 
 - No secrets belong here. Credentials are injected by OpenShell providers at runtime.
+- The model is **not** baked into the image. Set it in your project by adding an `opencode.json`
+  (or `opencode.jsonc`) to the project root; OpenCode reads it from the working directory
+  (`/sandbox/repo`) and it is uploaded with the project. For example:
+  `{"model": "opencode-go/deepseek-v4-pro"}`. Stick to `opencode-go/*` models (e.g.
+  `deepseek-v4-pro`, `gemini-4-argon`) — they use `Authorization: Bearer` and are covered by the
+  "OpenCode Go" subscription. The out-of-box default (`gemini-4-hydrogen`) is the pay-as-you-go
+  "OpenCode Models" tier and returns `402 Insufficient balance` unless you top up credits and
+  switch the profile placement to `x-goog-api-key`.
 - `apk` package versions float at build time; pin the published image digest in consumers for
   reproducibility.
 - Network policy is default-deny; review any change carefully.

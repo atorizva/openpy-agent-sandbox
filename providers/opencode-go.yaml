@@ -13,6 +13,7 @@ credentials:
     description: OpenCode API key
     env_vars: [OPENCODE_API_KEY]
     required: true
+    # opencode-go/* models use the OpenAI protocol (`Authorization: Bearer`).
     auth_style: bearer
     header_name: authorization
 discovery:
