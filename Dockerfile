@@ -23,11 +23,15 @@ RUN curl -LsSf https://astral.sh/uv/0.13.8/install.sh | sh
 # Install prek (pinned) via uv tool
 RUN uv tool install prek==0.5.10 --no-cache
 
-# Non-root user matching host UID/GID for bind-mount ownership
+# Non-root user matching policy run_as_user/run_as_group (1000:1000)
 RUN addgroup -g 1000 agent || true \
     && adduser -D -u 1000 -G agent agent || true \
     && mkdir -p /sandbox /sandbox/repo \
     && chown -R agent:agent /sandbox
+
+# Let git authenticate to GitHub via gh (which reads the OpenShell-injected
+# GITHUB_TOKEN placeholder). Without this, `git push` over HTTPS has no credentials.
+COPY --chown=agent:agent .gitconfig /sandbox/.gitconfig
 
 USER agent
 WORKDIR /sandbox
