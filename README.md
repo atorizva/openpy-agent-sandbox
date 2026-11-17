@@ -53,36 +53,48 @@ export GITHUB_TOKEN="ghp_..."   # or a fine-grained token
 openshell provider create --name github --type github --global-profile --credential GITHUB_TOKEN
 ```
 
-## Run (seed a project into the sandbox and attach)
+## Run (seed a project into the sandbox and run OpenCode as its main process)
 
 ```bash
-just start /path/to/project
+just start /path/to/project   # create + seed the sandbox, OpenCode starts as the main process
+just opencode                 # attach the TUI (same as `just connect`)
 ```
 
-`just start` creates the sandbox, uploads the project (one-way, `.git` included via
+OpenCode runs as the sandbox's **canonical main process** (`sandbox create --tty --detach --
+opencode`), not as a transient `sandbox exec`. That is what agent-aware panes (herdr-openshell)
+attach to, and it keeps the agent alive when you detach (`Ctrl-P Ctrl-Q`, or `Ctrl-D` in a shell).
+
+`just start` creates the sandbox, then uploads the project (one-way, `.git` included via
 `--no-git-ignore` so the agent can branch/commit/PR), moves it to `/sandbox/repo`, strips the
-`.gitignore`'d artifacts with `git clean -fdX`, and drops you into the OpenCode TUI so you can
-watch and guide the agent. Changes flow back to the host through a pull request, not a bind mount.
+`.gitignore`'d artifacts with `git clean -fdX`, and finally touches the `/sandbox/.repo-ready`
+sentinel the main process is waiting on. The main process then `exec`s OpenCode in
+`/sandbox/repo`, so the project's `opencode.jsonc`/model config applies. Changes flow back to the
+host through a pull request, not a bind mount.
 
 Raw equivalent:
 
 ```bash
+# 1. Create the sandbox; opencode is the main process and waits (max 120s) for the seeded repo.
 openshell sandbox create --name agent-py-sandbox \
-  --from openpy-agent-sandbox:local --detach \
-  --upload /path/to/project:/sandbox --no-git-ignore \
+  --from openpy-agent-sandbox:local --tty --detach \
   --provider opencode-go --provider github \
-  --policy policy.yaml
+  --policy policy.yaml \
+  -- sh -lc "timeout 120 sh -c 'until [ -f /sandbox/.repo-ready ]; do sleep 1; done' && cd /sandbox/repo && exec opencode --standalone"
 
+# 2. Upload the project (cannot be a `create --upload`: uploads finish after the main process starts).
+openshell sandbox upload agent-py-sandbox /path/to/project /sandbox --no-git-ignore
+
+# 3. Move it to the fixed path, then release the main process.
 openshell sandbox exec -n agent-py-sandbox -- \
-  sh -lc "rm -rf /sandbox/repo && mv '/sandbox/$(basename /path/to/project)' /sandbox/repo && git -C /sandbox/repo clean -fdX"
-
-openshell sandbox exec -n agent-py-sandbox --tty --workdir /sandbox/repo -- opencode --standalone
+  sh -lc "rm -rf /sandbox/repo && mv '/sandbox/$(basename /path/to/project)' /sandbox/repo && git -C /sandbox/repo clean -fdX && touch /sandbox/.repo-ready"
 ```
 
-`--upload` preserves the source basename, so the second step moves it to the fixed `/sandbox/repo`
-path. `--no-git-ignore` is required because the default `.gitignore` filtering also drops `.git`
-itself (verified against 0.1.8); it keeps `.git` (branch/remote/history) but also copies ignored
-files, which the following `git clean -fdX` removes.
+`upload` preserves the source basename, so step 3 moves it to the fixed `/sandbox/repo` path.
+`--no-git-ignore` is required because the default `.gitignore` filtering also drops `.git` itself
+(verified against 0.1.8); it keeps `.git` (branch/remote/history) but also copies ignored files,
+which the following `git clean -fdX` removes. If the upload or the move fails, the sentinel never
+appears: the main process gives up after 120s and the sandbox ends in an error phase instead of
+hanging.
 
 ## Image publishing
 
